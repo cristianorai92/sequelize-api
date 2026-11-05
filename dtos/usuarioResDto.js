@@ -1,5 +1,5 @@
 module.exports = {
-    fromEnity: (usuario) => {
+    fromEntity: (usuario) => {
         return {
             id: usuario.id,
             email: usuario.email,
