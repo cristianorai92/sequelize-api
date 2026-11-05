@@ -4,11 +4,11 @@ const usuarioResDto = require("../dtos/usuarioResDto");
 const { Usuario } = require("../models");
 const { where } = require("sequelize");
 const bcrypt = require('bcrypt');
-const crypto = require('crypto')
+const crypto = require('crypto');
+const { error } = require("console");
 
 
 exports.criarUsuario = async (req, res) => {
-
     try {
         const dados = usuarioReqDto.toEntity(req.body);
         const usuarioExistente = await Usuario.findOne({ where: {email: dados.email}});
@@ -26,23 +26,24 @@ exports.criarUsuario = async (req, res) => {
 }
 
 exports.listarUsuarios = async (req, res) => {
-    
     try {
         const usuarios = await Usuario.findAll(); //sequelize
         const resultado = usuarios.map(usuarioResDto.fromEntity);
         res.json(resultado);
-
+    } catch (e) {
+        res.status(400).json({ erro: e.message });
     }
 }
 
 exports.solicitarVerificacao = async (req, res) => {
     try {
         const { email } = req.body;
-        const usuario = await Usuario.findOne({ where: {email} });
+        const usuario = await Usuario.findOne({ where: { email } });
+
         if (!usuario) {
             return res.status(404).json({ erro: 'Usuário não encontrado.' });
         }
-        if (usuario.emailVerificado){
+        if (usuario.emailVerificado) {
             return res.status(400).json({ erro: 'Email já verificado.' })
         }
 
@@ -55,8 +56,8 @@ exports.solicitarVerificacao = async (req, res) => {
         });
 
         const emailEnviado = sendVerification(email, codigoVerificacao);
-        if (!emailEnviado){
-            return res.status(400).json({ erro: 'Erro ao enviar verificação!' })
+        if (!emailEnviado) {
+            return res.status(400).json({ erro: 'Erro ao enviar verificação!' });
         }
         res.json({ message: 'Código de verificação enviado!' });
     } catch (e) {
@@ -64,10 +65,10 @@ exports.solicitarVerificacao = async (req, res) => {
     }
 }
 
-exports.verificarEmail = async (req,res) => {
+exports.verificarEmail = async (req, res) => {
     try {
         const { email, codigo } = req.body;
-        const usuario = await Usuario.findOne({ where: {email}});
+        const usuario = await Usuario.findOne({ where: {email} });
 
         if (!usuario) {
             return res.status(404).json({ erro: 'Usuário não encontrado.' });
@@ -75,10 +76,10 @@ exports.verificarEmail = async (req,res) => {
         if (usuario.emailVerificado) {
             return res.status(400).json({ erro: 'Usuário já verificado.' });
         }
-        if (usuario.emailVerificacao !== codigo) {
+        if (usuario.codigoVerificacao !== codigo) {
             return res.status(401).json({ erro: 'Código inválido.' });
         }
-        if (usuario.emailExpiracao) {
+        if (new Date() > usuario.codigoExpiracao) {
             return res.status(401).json({ erro: 'Código expirado.' });
         }
 
@@ -87,7 +88,7 @@ exports.verificarEmail = async (req,res) => {
             codigoVerificacao: null,
             codigoExpiracao: null
         });
-        res.json({ message: 'Email verificado com sucesso' });
+        res.json({ message: 'Email verificado com sucesso!' });
     } catch (e) {
         res.status(400).json({ erro: e.message });
     }
